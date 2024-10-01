@@ -47,7 +47,7 @@ from dagster._core.errors import (
 from dagster._core.execution.backfill import PartitionBackfill
 from dagster._core.instance import DagsterInstance
 from dagster._core.remote_representation.code_location import CodeLocation
-from dagster._core.remote_representation.external import ExternalJob, ExternalSensor
+from dagster._core.remote_representation.external import RemoteJob, RemoteSensor
 from dagster._core.remote_representation.external_data import TargetSnap
 from dagster._core.scheduler.instigation import (
     DynamicPartitionsRequestResult,
@@ -108,7 +108,7 @@ class BackfillSubmission(NamedTuple):
 class SensorLaunchContext(AbstractContextManager):
     def __init__(
         self,
-        external_sensor: ExternalSensor,
+        external_sensor: RemoteSensor,
         tick: InstigatorTick,
         instance: DagsterInstance,
         logger: logging.Logger,
@@ -381,7 +381,7 @@ def execute_sensor_iteration(
 
     tick_retention_settings = instance.get_tick_retention_settings(InstigatorType.SENSOR)
 
-    sensors: Dict[str, ExternalSensor] = {}
+    sensors: Dict[str, RemoteSensor] = {}
     for location_entry in workspace_snapshot.values():
         code_location = location_entry.code_location
         if code_location:
@@ -461,7 +461,7 @@ def execute_sensor_iteration(
 def _process_tick(
     workspace_process_context: IWorkspaceProcessContext,
     logger: logging.Logger,
-    external_sensor: ExternalSensor,
+    external_sensor: RemoteSensor,
     sensor_state: InstigatorState,
     sensor_debug_crash_flags: Optional[SingleInstigatorDebugCrashFlags],
     tick_retention_settings,
@@ -484,7 +484,7 @@ def _process_tick(
 
 def _get_evaluation_tick(
     instance: DagsterInstance,
-    sensor: ExternalSensor,
+    sensor: RemoteSensor,
     instigator_data: Optional[SensorInstigatorData],
     evaluation_timestamp: float,
     logger: logging.Logger,
@@ -563,7 +563,7 @@ def _get_evaluation_tick(
 def _process_tick_generator(
     workspace_process_context: IWorkspaceProcessContext,
     logger: logging.Logger,
-    external_sensor: ExternalSensor,
+    external_sensor: RemoteSensor,
     sensor_state: InstigatorState,
     sensor_debug_crash_flags: Optional[SingleInstigatorDebugCrashFlags],
     tick_retention_settings,
@@ -645,7 +645,7 @@ def _sensor_instigator_data(state: InstigatorState) -> Optional[SensorInstigator
 
 def mark_sensor_state_for_tick(
     instance: DagsterInstance,
-    external_sensor: ExternalSensor,
+    external_sensor: RemoteSensor,
     sensor_state: InstigatorState,
     now: datetime.datetime,
 ) -> None:
@@ -680,7 +680,7 @@ def _submit_run_request(
     run_id: str,
     run_request: RunRequest,
     workspace_process_context: IWorkspaceProcessContext,
-    external_sensor: ExternalSensor,
+    external_sensor: RemoteSensor,
     existing_runs_by_key,
     logger,
     sensor_debug_crash_flags,
@@ -741,7 +741,7 @@ def _resume_tick(
     workspace_process_context: IWorkspaceProcessContext,
     context: SensorLaunchContext,
     tick: InstigatorTick,
-    external_sensor: ExternalSensor,
+    external_sensor: RemoteSensor,
     submit_threadpool_executor: Optional[ThreadPoolExecutor],
     sensor_debug_crash_flags: Optional[SingleInstigatorDebugCrashFlags] = None,
 ):
@@ -775,7 +775,7 @@ def _resume_tick(
 
 def _get_code_location_for_sensor(
     workspace_process_context: IWorkspaceProcessContext,
-    external_sensor: ExternalSensor,
+    external_sensor: RemoteSensor,
 ) -> CodeLocation:
     sensor_origin = external_sensor.get_remote_origin()
     return workspace_process_context.create_request_context().get_code_location(
@@ -786,7 +786,7 @@ def _get_code_location_for_sensor(
 def _evaluate_sensor(
     workspace_process_context: IWorkspaceProcessContext,
     context: SensorLaunchContext,
-    external_sensor: ExternalSensor,
+    external_sensor: RemoteSensor,
     state: InstigatorState,
     submit_threadpool_executor: Optional[ThreadPoolExecutor],
     sensor_debug_crash_flags: Optional[SingleInstigatorDebugCrashFlags] = None,
@@ -946,7 +946,7 @@ def _handle_run_reactions(
     instance: DagsterInstance,
     context: SensorLaunchContext,
     cursor: Optional[str],
-    external_sensor: ExternalSensor,
+    external_sensor: RemoteSensor,
 ) -> None:
     for run_reaction in dagster_run_reactions:
         origin_run_id = check.not_none(run_reaction.dagster_run).run_id
@@ -989,7 +989,7 @@ def _handle_run_reactions(
 def _resolve_run_requests(
     workspace_process_context: IWorkspaceProcessContext,
     context: SensorLaunchContext,
-    external_sensor: ExternalSensor,
+    external_sensor: RemoteSensor,
     run_ids_with_requests: Sequence[Tuple[str, RunRequest]],
     has_evaluations: bool,
 ) -> Sequence[Tuple[str, RunRequest]]:
@@ -1027,7 +1027,7 @@ def _handle_run_requests_and_automation_condition_evaluations(
     cursor: Optional[str],
     instance: DagsterInstance,
     context: SensorLaunchContext,
-    external_sensor: ExternalSensor,
+    external_sensor: RemoteSensor,
     workspace_process_context: IWorkspaceProcessContext,
     submit_threadpool_executor: Optional[ThreadPoolExecutor],
     sensor_debug_crash_flags: Optional[SingleInstigatorDebugCrashFlags] = None,
@@ -1080,7 +1080,7 @@ def _submit_run_requests(
     automation_condition_evaluations: Sequence[AutomationConditionEvaluationWithRunIds],
     instance: DagsterInstance,
     context: SensorLaunchContext,
-    external_sensor: ExternalSensor,
+    external_sensor: RemoteSensor,
     workspace_process_context: IWorkspaceProcessContext,
     submit_threadpool_executor: Optional[ThreadPoolExecutor],
     sensor_debug_crash_flags: Optional[SingleInstigatorDebugCrashFlags] = None,
@@ -1190,7 +1190,7 @@ def _submit_backfill_request(
     )
 
 
-def is_under_min_interval(state: InstigatorState, external_sensor: ExternalSensor) -> bool:
+def is_under_min_interval(state: InstigatorState, external_sensor: RemoteSensor) -> bool:
     instigator_data = _sensor_instigator_data(state)
     if not instigator_data:
         return False
@@ -1210,7 +1210,7 @@ def is_under_min_interval(state: InstigatorState, external_sensor: ExternalSenso
 
 def _fetch_existing_runs(
     instance: DagsterInstance,
-    external_sensor: ExternalSensor,
+    external_sensor: RemoteSensor,
     run_requests: Sequence[RunRequest],
 ):
     run_keys = [run_request.run_key for run_request in run_requests if run_request.run_key]
@@ -1260,8 +1260,8 @@ def _get_or_create_sensor_run(
     logger: logging.Logger,
     instance: DagsterInstance,
     code_location: CodeLocation,
-    external_sensor: ExternalSensor,
-    external_job: ExternalJob,
+    external_sensor: RemoteSensor,
+    external_job: RemoteJob,
     run_id: str,
     run_request: RunRequest,
     target_data: TargetSnap,
@@ -1291,8 +1291,8 @@ def _get_or_create_sensor_run(
 def _create_sensor_run(
     instance: DagsterInstance,
     code_location: CodeLocation,
-    external_sensor: ExternalSensor,
-    external_job: ExternalJob,
+    external_sensor: RemoteSensor,
+    external_job: RemoteJob,
     run_id: str,
     run_request: RunRequest,
     target_data: TargetSnap,

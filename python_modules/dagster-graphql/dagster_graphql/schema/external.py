@@ -11,9 +11,9 @@ from dagster._core.definitions.partition import CachingDynamicPartitionsLoader
 from dagster._core.definitions.sensor_definition import SensorType
 from dagster._core.remote_representation import (
     CodeLocation,
-    ExternalRepository,
     GrpcServerCodeLocation,
     ManagedGrpcPythonEnvCodeLocationOrigin,
+    RemoteRepository,
 )
 from dagster._core.remote_representation.feature_flags import get_feature_flags_for_location
 from dagster._core.remote_representation.grpc_server_state_subscriber import (
@@ -274,14 +274,14 @@ class GrapheneRepository(graphene.ObjectType):
     def __init__(
         self,
         workspace_context: BaseWorkspaceRequestContext,
-        repository: ExternalRepository,
+        repository: RemoteRepository,
         repository_location: CodeLocation,
     ):
         # Warning! GrapheneAssetNode contains a GrapheneRepository. Any computation in this
         # __init__ will be done **once per asset**. Ensure that any expensive work is done
         # elsewhere or cached.
         instance = workspace_context.instance
-        self._repository = check.inst_param(repository, "repository", ExternalRepository)
+        self._repository = check.inst_param(repository, "repository", RemoteRepository)
         self._repository_location = check.inst_param(
             repository_location, "repository_location", CodeLocation
         )

@@ -38,7 +38,7 @@ from dagster._core.definitions.partition import PartitionsDefinition
 from dagster._core.definitions.partition_mapping import PartitionMapping
 from dagster._core.definitions.selector import RepositorySelector
 from dagster._core.definitions.utils import DEFAULT_GROUP_NAME
-from dagster._core.remote_representation.external import ExternalRepository
+from dagster._core.remote_representation.external import RemoteRepository
 
 if TYPE_CHECKING:
     from dagster._core.remote_representation.external_data import AssetCheckNodeSnap, AssetNodeSnap
@@ -382,7 +382,7 @@ class RemoteAssetGraph(BaseAssetGraph[RemoteAssetNode]):
     def get_implicit_job_name_for_assets(
         self,
         asset_keys: Iterable[AssetKey],
-        external_repo: Optional[ExternalRepository],
+        external_repo: Optional[RemoteRepository],
     ) -> Optional[str]:
         """Returns the name of the asset base job that contains all the given assets, or None if there is no such
         job.

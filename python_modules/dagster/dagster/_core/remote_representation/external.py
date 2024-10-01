@@ -118,8 +118,8 @@ class CompoundID:
         return len(parts) == 2
 
 
-class ExternalRepository:
-    """ExternalRepository is a object that represents a loaded repository definition that
+class RemoteRepository:
+    """RemoteRepository is a object that represents a loaded repository definition that
     is resident in another process or container. Host processes such as dagster-webserver use
     objects such as these to interact with user-defined artifacts.
     """
@@ -170,7 +170,7 @@ class ExternalRepository:
 
         # memoize job instances to share instances
         self._memo_lock: RLock = RLock()
-        self._cached_jobs: Dict[str, ExternalJob] = {}
+        self._cached_jobs: Dict[str, RemoteJob] = {}
 
     @property
     def name(self) -> str:
@@ -178,36 +178,36 @@ class ExternalRepository:
 
     @property
     @cached_method
-    def _external_schedules(self) -> Dict[str, "ExternalSchedule"]:
+    def _external_schedules(self) -> Dict[str, "RemoteSchedule"]:
         return {
-            external_schedule_data.name: ExternalSchedule(external_schedule_data, self._handle)
+            external_schedule_data.name: RemoteSchedule(external_schedule_data, self._handle)
             for external_schedule_data in self.external_repository_data.schedules
         }
 
     def has_external_schedule(self, schedule_name: str) -> bool:
         return schedule_name in self._external_schedules
 
-    def get_external_schedule(self, schedule_name: str) -> "ExternalSchedule":
+    def get_external_schedule(self, schedule_name: str) -> "RemoteSchedule":
         return self._external_schedules[schedule_name]
 
-    def get_external_schedules(self) -> Sequence["ExternalSchedule"]:
+    def get_external_schedules(self) -> Sequence["RemoteSchedule"]:
         return list(self._external_schedules.values())
 
     @property
     @cached_method
-    def _external_resources(self) -> Dict[str, "ExternalResource"]:
+    def _external_resources(self) -> Dict[str, "RemoteResource"]:
         return {
-            external_resource_data.name: ExternalResource(external_resource_data, self._handle)
+            external_resource_data.name: RemoteResource(external_resource_data, self._handle)
             for external_resource_data in (self.external_repository_data.resources or [])
         }
 
     def has_external_resource(self, resource_name: str) -> bool:
         return resource_name in self._external_resources
 
-    def get_external_resource(self, resource_name: str) -> "ExternalResource":
+    def get_external_resource(self, resource_name: str) -> "RemoteResource":
         return self._external_resources[resource_name]
 
-    def get_external_resources(self) -> Iterable["ExternalResource"]:
+    def get_external_resources(self) -> Iterable["RemoteResource"]:
         return self._external_resources.values()
 
     @property
@@ -222,9 +222,9 @@ class ExternalRepository:
 
     @property
     @cached_method
-    def _external_sensors(self) -> Dict[str, "ExternalSensor"]:
+    def _external_sensors(self) -> Dict[str, "RemoteSensor"]:
         sensor_datas = {
-            external_sensor_data.name: ExternalSensor(external_sensor_data, self._handle)
+            external_sensor_data.name: RemoteSensor(external_sensor_data, self._handle)
             for external_sensor_data in self.external_repository_data.sensors
         }
 
@@ -300,7 +300,7 @@ class ExternalRepository:
                     sensor_type=SensorType.AUTO_MATERIALIZE,
                     run_tags=None,
                 )
-                sensor_datas[default_sensor_data.name] = ExternalSensor(
+                sensor_datas[default_sensor_data.name] = RemoteSensor(
                     default_sensor_data, self._handle
                 )
 
@@ -309,17 +309,17 @@ class ExternalRepository:
     def has_external_sensor(self, sensor_name: str) -> bool:
         return sensor_name in self._external_sensors
 
-    def get_external_sensor(self, sensor_name: str) -> "ExternalSensor":
+    def get_external_sensor(self, sensor_name: str) -> "RemoteSensor":
         return self._external_sensors[sensor_name]
 
-    def get_external_sensors(self) -> Sequence["ExternalSensor"]:
+    def get_external_sensors(self) -> Sequence["RemoteSensor"]:
         return list(self._external_sensors.values())
 
     @property
     @cached_method
-    def _external_partition_sets(self) -> Dict[str, "ExternalPartitionSet"]:
+    def _external_partition_sets(self) -> Dict[str, "RemotePartitionSet"]:
         return {
-            external_partition_set_data.name: ExternalPartitionSet(
+            external_partition_set_data.name: RemotePartitionSet(
                 external_partition_set_data, self._handle
             )
             for external_partition_set_data in self.external_repository_data.partition_sets
@@ -328,16 +328,16 @@ class ExternalRepository:
     def has_external_partition_set(self, partition_set_name: str) -> bool:
         return partition_set_name in self._external_partition_sets
 
-    def get_external_partition_set(self, partition_set_name: str) -> "ExternalPartitionSet":
+    def get_external_partition_set(self, partition_set_name: str) -> "RemotePartitionSet":
         return self._external_partition_sets[partition_set_name]
 
-    def get_external_partition_sets(self) -> Sequence["ExternalPartitionSet"]:
+    def get_external_partition_sets(self) -> Sequence["RemotePartitionSet"]:
         return list(self._external_partition_sets.values())
 
     def has_external_job(self, job_name: str) -> bool:
         return job_name in self._job_map
 
-    def get_full_external_job(self, job_name: str) -> "ExternalJob":
+    def get_full_external_job(self, job_name: str) -> "RemoteJob":
         check.str_param(job_name, "job_name")
         check.invariant(
             self.has_external_job(job_name), f'No external job named "{job_name}" found'
@@ -356,7 +356,7 @@ class ExternalRepository:
                     external_data = job_item
                     external_ref = None
 
-                self._cached_jobs[job_name] = ExternalJob(
+                self._cached_jobs[job_name] = RemoteJob(
                     external_job_data=external_data,
                     repository_handle=self.handle,
                     external_job_ref=external_ref,
@@ -365,7 +365,7 @@ class ExternalRepository:
 
             return self._cached_jobs[job_name]
 
-    def get_all_external_jobs(self) -> Sequence["ExternalJob"]:
+    def get_all_external_jobs(self) -> Sequence["RemoteJob"]:
         return [self.get_full_external_job(pn) for pn in self._job_map]
 
     @property
@@ -486,7 +486,7 @@ class ExternalRepository:
             )
 
 
-class ExternalJob(RepresentedJob):
+class RemoteJob(RepresentedJob):
     """ExternalJob is a object that represents a loaded job definition that
     is resident in another process or container. Host processes such as dagster-webserver use
     objects such as these to interact with user-defined artifacts.
@@ -665,7 +665,7 @@ class ExternalJob(RepresentedJob):
         return self.get_remote_origin().get_id()
 
 
-class ExternalExecutionPlan:
+class RemoteExecutionPlan:
     """ExternalExecution is a object that represents an execution plan that
     was compiled in another process or persisted in an instance.
     """
@@ -752,7 +752,7 @@ class ExternalExecutionPlan:
         return self._topological_step_levels
 
 
-class ExternalResource:
+class RemoteResource:
     """Represents a top-level resource in a repository, e.g. one passed through the Definitions API."""
 
     def __init__(self, external_resource_data: ResourceSnap, handle: RepositoryHandle):
@@ -821,7 +821,7 @@ class ExternalResource:
         return self._external_resource_data.dagster_maintained
 
 
-class ExternalSchedule:
+class RemoteSchedule:
     def __init__(self, external_schedule_data: ScheduleSnap, handle: RepositoryHandle):
         self._external_schedule_data = check.inst_param(
             external_schedule_data, "external_schedule_data", ScheduleSnap
@@ -964,7 +964,7 @@ class ExternalSchedule:
         )
 
 
-class ExternalSensor:
+class RemoteSensor:
     def __init__(self, external_sensor_data: SensorSnap, handle: RepositoryHandle):
         self._external_sensor_data = check.inst_param(
             external_sensor_data, "external_sensor_data", SensorSnap
@@ -1125,7 +1125,7 @@ class ExternalSensor:
         return self._external_sensor_data.default_status or DefaultSensorStatus.STOPPED
 
 
-class ExternalPartitionSet:
+class RemotePartitionSet:
     def __init__(self, external_partition_set_data: PartitionSetSnap, handle: RepositoryHandle):
         self._external_partition_set_data = check.inst_param(
             external_partition_set_data, "external_partition_set_data", PartitionSetSnap

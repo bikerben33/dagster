@@ -18,10 +18,17 @@ from dagster._record import (
 from dagster._serdes.serdes import deserialize_value, serialize_value, whitelist_for_serdes
 from dagster._utils import hash_collection
 from dagster._utils.cached_method import cached_method
+from dagster._utils.env import environ
 from typing_extensions import Annotated
 
 if TYPE_CHECKING:
     from dagster._core.test_utils import TestType
+
+
+@pytest.fixture(scope="module", autouse=True)
+def enable_defensive_checks():
+    with environ({"DAGSTER_RECORD_DEFENSIVE_CHECKS": "true"}):
+        yield
 
 
 def test_kwargs_only() -> None:

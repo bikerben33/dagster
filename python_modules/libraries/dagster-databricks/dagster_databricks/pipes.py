@@ -409,6 +409,9 @@ class PipesDbfsLogReader(PipesChunkedLogReader):
         self.log_modification_time = None
         self.log_path = None
 
+    def target_is_readable(self, params: PipesParams) -> bool:
+        return self._get_log_path(params) is not None
+
     def download_log_chunk(self, params: PipesParams) -> Optional[str]:
         log_path = self._get_log_path(params)
         if log_path is None:
@@ -427,9 +430,6 @@ class PipesDbfsLogReader(PipesChunkedLogReader):
                 return chunk
             except IOError:
                 return None
-
-    def target_is_readable(self, params: PipesParams) -> bool:
-        return self._get_log_path(params) is not None
 
     @property
     def name(self) -> str:

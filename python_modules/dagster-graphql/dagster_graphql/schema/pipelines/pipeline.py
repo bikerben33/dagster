@@ -636,10 +636,7 @@ class GrapheneRun(graphene.ObjectType):
             return False
 
         run_tags = self.dagster_run.tags
-        for tag in RUN_METRIC_TAGS:
-            if get_boolean_tag_value(run_tags.get(tag)):
-                return True
-        return False
+        return any(get_boolean_tag_value(run_tags.get(tag) for tag in RUN_METRIC_TAGS))
 
 
 class GrapheneIPipelineSnapshotMixin:

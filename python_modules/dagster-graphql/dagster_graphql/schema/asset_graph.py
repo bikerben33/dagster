@@ -17,7 +17,6 @@ from dagster._core.definitions.data_version import (
 from dagster._core.definitions.partition import CachingDynamicPartitionsLoader, PartitionsDefinition
 from dagster._core.definitions.partition_mapping import PartitionMapping
 from dagster._core.definitions.remote_asset_graph import RemoteAssetGraph
-from dagster._core.definitions.selector import RepositorySelector
 from dagster._core.definitions.sensor_definition import SensorType
 from dagster._core.errors import DagsterInvariantViolationError
 from dagster._core.event_api import AssetRecordsFilter
@@ -31,6 +30,7 @@ from dagster._core.remote_representation.external_data import (
     StaticPartitionsSnap,
     TimeWindowPartitionsSnap,
 )
+from dagster._core.remote_representation.handle import RepositoryHandle
 from dagster._core.snap.node import GraphDefSnap, OpDefSnap
 from dagster._core.storage.event_log.base import AssetRecord
 from dagster._core.storage.tags import KIND_PREFIX
@@ -157,15 +157,15 @@ class GrapheneAssetDependency(graphene.ObjectType):
     def __init__(
         self,
         *,
-        repository_selector: RepositorySelector,
+        repository_handle: RepositoryHandle,
         input_name: Optional[str],
         asset_key: AssetKey,
         asset_checks_loader: AssetChecksLoader,
         depended_by_loader: Optional[CrossRepoAssetDependedByLoader] = None,
         partition_mapping: Optional[PartitionMapping] = None,
     ):
-        self._repository_selector = check.inst_param(
-            repository_selector, "repository_selector", RepositorySelector
+        self._repository_handle = check.inst_param(
+            repository_handle, "repository_handle", RepositoryHandle
         )
         self._asset_key = check.inst_param(asset_key, "asset_key", AssetKey)
         self._asset_checks_loader = check.inst_param(
@@ -187,7 +187,7 @@ class GrapheneAssetDependency(graphene.ObjectType):
             asset_node = self._depended_by_loader.get_sink_asset(self._asset_key)
         asset_node = check.not_none(asset_node)
         return GrapheneAssetNode(
-            repository_selector=self._repository_selector,
+            repository_handle=self._repository_handle,
             asset_node_snap=asset_node,
             asset_checks_loader=self._asset_checks_loader,
         )
@@ -332,7 +332,7 @@ class GrapheneAssetNode(graphene.ObjectType):
     def __init__(
         self,
         *,
-        repository_selector: RepositorySelector,
+        repository_handle: RepositoryHandle,
         asset_node_snap: AssetNodeSnap,
         asset_checks_loader: AssetChecksLoader,
         depended_by_loader: Optional[CrossRepoAssetDependedByLoader] = None,
@@ -342,11 +342,12 @@ class GrapheneAssetNode(graphene.ObjectType):
     ):
         from dagster_graphql.implementation.fetch_assets import get_unique_asset_id
 
-        self._repository_selector = check.inst_param(
-            repository_selector,
-            "repository_selector",
-            RepositorySelector,
+        self._repository_handle = check.inst_param(
+            repository_handle,
+            "repository_handle",
+            RepositoryHandle,
         )
+        self._repository_selector = repository_handle.to_selector()
         self._asset_node_snap = check.inst_param(asset_node_snap, "asset_node_snap", AssetNodeSnap)
         self._depended_by_loader = check.opt_inst_param(
             depended_by_loader, "depended_by_loader", CrossRepoAssetDependedByLoader
@@ -371,8 +372,8 @@ class GrapheneAssetNode(graphene.ObjectType):
         super().__init__(
             id=get_unique_asset_id(
                 asset_node_snap.asset_key,
-                repository_selector.location_name,
-                repository_selector.repository_name,
+                repository_handle.location_name,
+                repository_handle.repository_name,
             ),
             assetKey=asset_node_snap.asset_key,
             description=asset_node_snap.description,
@@ -810,7 +811,7 @@ class GrapheneAssetNode(graphene.ObjectType):
 
         return [
             GrapheneAssetDependency(
-                repository_selector=self._repository_selector,
+                repository_handle=self._repository_handle,
                 input_name=dep.input_name,
                 asset_key=dep.child_asset_key,
                 asset_checks_loader=asset_checks_loader,
@@ -855,7 +856,7 @@ class GrapheneAssetNode(graphene.ObjectType):
         )
         return [
             GrapheneAssetDependency(
-                repository_selector=self._repository_selector,
+                repository_handle=self._repository_handle,
                 input_name=dep.input_name,
                 asset_key=dep.parent_asset_key,
                 asset_checks_loader=asset_checks_loader,

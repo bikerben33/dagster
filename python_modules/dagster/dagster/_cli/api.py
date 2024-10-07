@@ -36,6 +36,7 @@ from dagster._core.origin import (
     get_python_environment_entry_point,
 )
 from dagster._core.storage.dagster_run import DagsterRun, DagsterRunStatus
+from dagster._core.storage.tags import RUN_METRIC_TAGS
 from dagster._core.types.loadable_target_origin import LoadableTargetOrigin
 from dagster._core.utils import FuturesAwareThreadPoolExecutor
 from dagster._grpc import DagsterGrpcClient, DagsterGrpcServer
@@ -87,9 +88,7 @@ def execute_run_command(input_json: str) -> None:
 
 
 def _should_start_metrics_thread(dagster_run: DagsterRun) -> bool:
-    return get_boolean_tag_value(
-        dagster_run.tags.get("dagster/run_metrics")
-    ) or get_boolean_tag_value(dagster_run.tags.get(".dagster/run_metrics"))
+    return any(get_boolean_tag_value(dagster_run.tags.get(tag)) for tag in RUN_METRIC_TAGS)
 
 
 def _enable_python_runtime_metrics(dagster_run: DagsterRun) -> bool:

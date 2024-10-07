@@ -5,6 +5,7 @@ import dagster._check as check
 from dagster._core.code_pointer import ModuleCodePointer
 from dagster._core.definitions.selector import JobSubsetSelector, RepositorySelector
 from dagster._core.origin import RepositoryPythonOrigin
+from dagster._core.remote_representation.external import CompoundID
 from dagster._core.remote_representation.origin import (
     CodeLocationOrigin,
     RegisteredCodeLocationOrigin,
@@ -52,6 +53,12 @@ class RepositoryHandle:
         return RepositorySelector(
             location_name=self.location_name,
             repository_name=self.repository_name,
+        )
+
+    def get_compound_id(self) -> CompoundID:
+        return CompoundID(
+            remote_origin_id=self.get_remote_origin().get_id(),
+            selector_id=self.to_selector().selector_id,
         )
 
     @staticmethod
